@@ -20,16 +20,17 @@
       opacity: 0.7;
     }
     .logo-container {
-      background: white;
-      padding: 6px;
-      border-radius: 8px;
-      box-shadow: 0 0 4px rgba(0,0,0,0.3);
-    }
-    .logo-container img {
-      display: block;
-      max-width: 100px;
-      height: auto;
-    }
+    background: white;
+    padding: 6px;
+    border-radius: 8px;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  }
+
+  .logo-container img {
+    display: block;
+    max-width: 100px;
+    height: auto;
+  }
   </style>
 </head>
 <body>
@@ -39,7 +40,7 @@
 <script src="data.js"></script> 
    
 <script>
-  const map = L.map('map').setView([53.5461, -113.4938], 10);
+  const map = L.map('map').setView([53.62, -113.09], 10);
   let layerControl;
 
   // Base layers
@@ -84,16 +85,16 @@
   const markerGroup = L.layerGroup(); 
   overlayLayers["Stations"] = markerGroup;
   const layersInfo = {
-    "Alberta AQHI": "AQHI_Alberta.geojson",
-    "Edmonton AQHI": "AQHI_Edm.geojson",
-    "Strathcona County AQHI": "AQHI_Strathcona.geojson",
-    "Parkland County AQHI": "AQHI_Parkland_County.geojson",
-    "ACA AQHI": "AQHI_ACA_Boundary_2022.geojson"
+    "Alberta AQHI": "https://raw.githubusercontent.com/DKevinM/AQHI.forecast/main/output/AQHI_Alberta.geojson",
+    "Edmonton AQHI": "https://raw.githubusercontent.com/DKevinM/AQHI.forecast/main/output/AQHI_Edm.geojson",
+    "Strathcona County AQHI": "https://raw.githubusercontent.com/DKevinM/AQHI.forecast/main/output/AQHI_Strathcona.geojson",
+    "Parkland County AQHI": "https://raw.githubusercontent.com/DKevinM/AQHI.forecast/main/output/AQHI_Parkland_County.geojson",
+    "ACA AQHI": "https://raw.githubusercontent.com/DKevinM/AQHI.forecast/main/output/AQHI_ACA_Boundary_2022.geojson"
   };
 
  // Load all AQHI GeoJSONs
   Promise.all(Object.entries(layersInfo).map(([label, file]) =>
-    fetch(`./output/${file}`)
+    fetch(file)
       .then(resp => resp.json())
       .then(data => {
         const timestamp = data.features[0]?.properties?.timestamp || label;
@@ -104,8 +105,8 @@
           }
         });
         overlayLayers[label] = layer;
-        if (label === "Edmonton AQHI") {
-          layer.addTo(map);  // Only Edmonton shows initially
+        if (label === "Strathcona County AQHI") {
+          layer.addTo(map);  // Only Strathcona County shows initially
         }
       })
   )).then(() => {
@@ -117,7 +118,7 @@
         transparent: true,
         opacity: 0.85
       }),
-      "Wind (U-component)": L.tileLayer.wms("https://geo.weather.gc.ca/geomet/?lang=en", {
+      "Winds": L.tileLayer.wms("https://geo.weather.gc.ca/geomet/?lang=en", {
         layers: "HRDPS.CONTINENTAL_UU",
         format: "image/png",
         transparent: true,
@@ -129,7 +130,7 @@
         transparent: true,
         opacity: 0.85
       }),
-      "Thunderstorm (3h)": L.tileLayer.wms("https://geo.weather.gc.ca/geomet", {
+      "Thunderstorm": L.tileLayer.wms("https://geo.weather.gc.ca/geomet", {
         layers: "GDPS-WEonG_15km_Thunderstorm-Prob.3h",
         format: "image/png",
         transparent: true,
@@ -157,14 +158,15 @@
   };
   legend.addTo(map);
 
+
   const logo = L.control({ position: 'bottomright' });
-    logo.onAdd = function () {
-      const div = L.DomUtil.create('div', 'logo-container');
-      div.innerHTML = `<img src="ACA_LOGO_CMYK.png" alt="Logo">`; 
-      return div;
-    };
-    logo.addTo(map);
-  
+  logo.onAdd = function () {
+    const div = L.DomUtil.create('div', 'logo-container');
+    div.innerHTML = `<img src="ACA_LOGO_CMYK.png" alt="Logo">`; 
+    return div;
+  };
+  logo.addTo(map);
+
   
   // Auto-refresh every 60 minutes
   setInterval(() => location.reload(), 60 * 60 * 1000);
