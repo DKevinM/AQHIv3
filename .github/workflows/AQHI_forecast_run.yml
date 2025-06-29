@@ -1,0 +1,67 @@
+name: Generate and Commit GeoJSON
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour on the hour
+  workflow_dispatch:      # allows manual trigger
+  
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          echo "Installing necessary Python packages..."
+          pip install requests pandas geopandas fiona numpy requests shapely scipy
+
+      - name: Generate current AQHI GeoJSONs
+        run: |
+          echo "Running aqhi_map_forecast.py..."
+          python aqhi_map_forecast.py || { echo "Python script failed!"; exit 1; }
+          ls output/*.geojson || { echo "No GeoJSON files created!"; exit 1; }
+
+      - name: Confirm GeoJSON generation
+        run: |
+          count=$(ls output/*.geojson 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo " No GeoJSON files were generated."
+            exit 1
+          else
+            echo " $count GeoJSON files successfully generated:"
+            ls output/*.geojson
+          fi
+
+      - name: Touch GeoJSON files to ensure Git detects changes
+        run: |
+          touch output/*.geojson
+
+      - name: Commit GeoJSON files if they exist
+        run: |
+          shopt -s nullglob
+          files=(output/*.geojson)
+          if [ ${#files[@]} -gt 0 ]; then
+            echo "Found GeoJSON files: ${files[@]}"
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            git add "${files[@]}"
+            git commit -m "Force update generated GeoJSON files" || echo "No changes to commit"
+            git push
+          else
+            echo " No GeoJSON files to commit."
+          fi
